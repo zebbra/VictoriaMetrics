@@ -142,6 +142,8 @@ type ScrapeWork struct {
 	// The offset for the first scrape.
 	ScrapeOffset time.Duration
 
+	ScrapeOffsetFactor float64
+
 	// Optional limit on the number of unique series the scrape target can expose.
 	SeriesLimit int
 
@@ -173,12 +175,12 @@ func (sw *ScrapeWork) key() string {
 		"HonorTimestamps=%v, DenyRedirects=%v, Labels=%s, ExternalLabels=%s, MaxScrapeSize=%d, "+
 		"ProxyURL=%s, ProxyAuthConfig=%s, AuthConfig=%s, MetricRelabelConfigs=%q, "+
 		"SampleLimit=%d, DisableCompression=%v, DisableKeepAlive=%v, StreamParse=%v, "+
-		"ScrapeAlignInterval=%s, ScrapeOffset=%s, SeriesLimit=%d, NoStaleMarkers=%v",
+		"ScrapeAlignInterval=%s, ScrapeOffset=%s, ScrapeOffsetFactor=%f.4, SeriesLimit=%d, NoStaleMarkers=%v",
 		sw.jobNameOriginal, sw.ScrapeURL, sw.ScrapeInterval, sw.ScrapeTimeout, sw.HonorLabels,
 		sw.HonorTimestamps, sw.DenyRedirects, sw.Labels.String(), sw.ExternalLabels.String(), sw.MaxScrapeSize,
 		sw.ProxyURL.String(), sw.ProxyAuthConfig.String(), sw.AuthConfig.String(), sw.MetricRelabelConfigs.String(),
 		sw.SampleLimit, sw.DisableCompression, sw.DisableKeepAlive, sw.StreamParse,
-		sw.ScrapeAlignInterval, sw.ScrapeOffset, sw.SeriesLimit, sw.NoStaleMarkers)
+		sw.ScrapeAlignInterval, sw.ScrapeOffset, sw.ScrapeOffsetFactor, sw.SeriesLimit, sw.NoStaleMarkers)
 	return key
 }
 
@@ -303,6 +305,13 @@ func (sw *scrapeWork) run(stopCh <-chan struct{}, globalStopCh <-chan struct{}) 
 		}
 		randSleep %= uint64(scrapeInterval)
 	}
+
+	shiftFactor := sw.Config.ScrapeOffsetFactor
+	sleepOffset := uint64(float64(randSleep) * shiftFactor)
+	randSleep += sleepOffset
+
+	logger.Infof("randSleep=%s shiftFactor=%f sleepOffset=%s", randSleep, shiftFactor, sleepOffset)
+
 	timer := timerpool.Get(time.Duration(randSleep))
 	var timestamp int64
 	var ticker *time.Ticker

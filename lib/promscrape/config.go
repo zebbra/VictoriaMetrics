@@ -332,6 +332,7 @@ type ScrapeConfig struct {
 	StreamParse         bool                       `yaml:"stream_parse,omitempty"`
 	ScrapeAlignInterval *promutil.Duration         `yaml:"scrape_align_interval,omitempty"`
 	ScrapeOffset        *promutil.Duration         `yaml:"scrape_offset,omitempty"`
+	ScrapeOffsetFactor  *float64                   `yaml:"scrape_offset_factor,omitempty"`
 	SeriesLimit         *int                       `yaml:"series_limit,omitempty"`
 	NoStaleMarkers      *bool                      `yaml:"no_stale_markers,omitempty"`
 	ProxyClientConfig   promauth.ProxyClientConfig `yaml:",inline"`
@@ -967,6 +968,11 @@ func getScrapeWorkConfig(sc *ScrapeConfig, baseDir string, globalCfg *GlobalConf
 	if sc.EnableCompression != nil {
 		disableCompression = !*sc.EnableCompression
 	}
+	// Default to 0.0 for scrapeOffsetFactor if not specified in the config
+	scrapeOffsetFactor := 0.0
+	if sc.ScrapeOffsetFactor != nil {
+		scrapeOffsetFactor = *sc.ScrapeOffsetFactor
+	}
 	swc := &scrapeWorkConfig{
 		scrapeInterval:       scrapeInterval,
 		scrapeIntervalString: scrapeInterval.String(),
@@ -992,6 +998,7 @@ func getScrapeWorkConfig(sc *ScrapeConfig, baseDir string, globalCfg *GlobalConf
 		streamParse:          sc.StreamParse,
 		scrapeAlignInterval:  sc.ScrapeAlignInterval.Duration(),
 		scrapeOffset:         sc.ScrapeOffset.Duration(),
+		scrapeOffsetFactor:   scrapeOffsetFactor,
 		seriesLimit:          seriesLimit,
 		noStaleMarkers:       noStaleTracking,
 	}
@@ -1023,6 +1030,7 @@ type scrapeWorkConfig struct {
 	streamParse          bool
 	scrapeAlignInterval  time.Duration
 	scrapeOffset         time.Duration
+	scrapeOffsetFactor   float64
 	seriesLimit          int
 	noStaleMarkers       bool
 }
@@ -1306,6 +1314,7 @@ func (swc *scrapeWorkConfig) getScrapeWork(target string, extraLabels, metaLabel
 		StreamParse:          streamParse,
 		ScrapeAlignInterval:  swc.scrapeAlignInterval,
 		ScrapeOffset:         swc.scrapeOffset,
+		ScrapeOffsetFactor:   swc.scrapeOffsetFactor,
 		SeriesLimit:          seriesLimit,
 		NoStaleMarkers:       swc.noStaleMarkers,
 		AuthToken:            at,
