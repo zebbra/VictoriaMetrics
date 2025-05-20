@@ -307,8 +307,8 @@ func (sw *scrapeWork) run(stopCh <-chan struct{}, globalStopCh <-chan struct{}) 
 	}
 
 	shiftFactor := sw.Config.ScrapeOffsetFactor
-	sleepOffset := uint64(float64(randSleep) * shiftFactor)
-	randSleep += sleepOffset
+	sleepOffset := uint64(float64(scrapeInterval) * shiftFactor)
+	randSleep = (randSleep + sleepOffset) % uint64(scrapeInterval)
 
 	logger.Infof("randSleep=%s shiftFactor=%f sleepOffset=%s", randSleep, shiftFactor, sleepOffset)
 
